@@ -5,6 +5,27 @@
 
 #include "Minicap.hpp"
 
+class ScalingFactor {
+public:
+  ScalingFactor(const tjscalingfactor *pFactor);
+  ~ScalingFactor();
+
+  static int loadScalingFactors();
+
+  //缩放比例
+  float scalingPercentage();
+
+  //分子 
+  int num();
+
+  //分母
+  int denom();
+
+private:
+  const tjscalingfactor *_pFactor;
+};
+
+
 class JpgEncoder {
 public:
   JpgEncoder(unsigned int prePadding, unsigned int postPadding);

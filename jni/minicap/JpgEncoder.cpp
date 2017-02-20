@@ -2,6 +2,34 @@
 
 #include "JpgEncoder.hpp"
 #include "util/debug.h"
+ScalingFactor::ScalingFactor(const tjscalingfactor *pFactor):
+_pFactor(pFactor){
+
+}
+ScalingFactor::~ScalingFactor(){
+
+}
+//缩放比例
+float ScalingFactor::scalingPercentage(){
+  return (float)_pFactor->num/(float)_pFactor->denom;
+}
+
+//分子 
+int ScalingFactor::num(){
+  return _pFactor->num;
+}
+
+//分母
+int ScalingFactor::denom(){
+  return _pFactor->denom;
+}
+
+
+int ScalingFactor::loadScalingFactors(){
+  return 0;
+}
+
+
 
 JpgEncoder::JpgEncoder(unsigned int prePadding, unsigned int postPadding)
   : mTjHandle(tjInitCompress()),

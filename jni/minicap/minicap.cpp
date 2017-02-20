@@ -36,6 +36,7 @@ enum {
 
 static void
 usage(const char* pname) {
+  printf("okok");
   fprintf(stderr,
     "Usage: %s [-h] [-n <name>]\n"
     "  -d <id>:       Display ID. (%d)\n"
@@ -46,6 +47,7 @@ usage(const char* pname) {
     "  -S:            Skip frames when they cannot be consumed quickly enough.\n"
     "  -t:            Attempt to get the capture method running, then exit.\n"
     "  -i:            Get display information in JSON format. May segfault.\n"
+    "  -x:            Get the scaling factors of libjpeg-turbo.\r\n"
     "  -h:            Show help.\n",
     pname, DEFAULT_DISPLAY_ID, DEFAULT_SOCKET_NAME
   );
@@ -213,10 +215,11 @@ main(int argc, char* argv[]) {
   bool takeScreenshot = false;
   bool skipFrames = false;
   bool testOnly = false;
+  bool scalingFactors = false;
   Projection proj;
 
   int opt;
-  while ((opt = getopt(argc, argv, "d:n:P:Q:siSth")) != -1) {
+  while ((opt = getopt(argc, argv, "d:n:P:Q:siSthx")) != -1) {
     switch (opt) {
     case 'd':
       displayId = atoi(optarg);
@@ -250,6 +253,9 @@ main(int argc, char* argv[]) {
     case 'h':
       usage(pname);
       return EXIT_SUCCESS;
+    case 'x':
+      scalingFactors = true;
+      break;
     case '?':
     default:
       usage(pname);
@@ -268,6 +274,30 @@ main(int argc, char* argv[]) {
   // Start Android's thread pool so that it will be able to serve our requests.
   minicap_start_thread_pool();
 
+  /*
+    打印缩放比例信息
+
+    int num = 0;
+    tjscalingfactor *pScalingFactor = tjGetScalingFactors(&num);
+    for(int i=0; i<num; i++){
+      tjscalingfactor *pCurrent = (pScalingFactor + i);
+      printf("%d/%d(%f) -> %dx%d\r\n", pCurrent->num, pCurrent->denom, (float)pCurrent->num/(float)pCurrent->denom, 
+        ((1080 * pCurrent->num + pCurrent->denom - 1) / pCurrent->denom),
+        ((1920 * pCurrent->num + pCurrent->denom - 1) / pCurrent->denom));
+    }
+  */
+  if (scalingFactors){
+    int num = 0;
+    tjscalingfactor *pScalingFactor = tjGetScalingFactors(&num);
+    printf("==============================\r\n");
+    printf("Scaling Table of libjpge-turbo\r\n");
+    printf("==============================\r\n");
+    for(int i=0; i<num; i++){
+      ScalingFactor factor = ScalingFactor(pScalingFactor + i);
+      printf("Scaling: %d/%d (Percentage: %f)\r\n", factor.num(), factor.denom(), factor.scalingPercentage());
+    }
+    return EXIT_SUCCESS;
+  }
   if (showInfo) {
     Minicap::DisplayInfo info;
 
