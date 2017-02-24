@@ -50,8 +50,16 @@ public:
     void const* data;
     Format format;
     uint32_t width;
-    uint32_t height;
+    uint32_t height;    
+    /*
+      stride指在内存中每行像素所占的空间
+      因为涉及到内存对其的问题，所以stride／bpp并不能代表图片的宽度
+      如果 Stride 不是 4 的倍数, 那么 Stride = Stride + (4 - Stride mod 4);
+    */
     uint32_t stride;
+    /*
+      Byte per pixel
+    */
     uint32_t bpp;
     size_t size;
   };

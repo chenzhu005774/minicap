@@ -25,10 +25,28 @@ private:
   const tjscalingfactor *_pFactor;
 };
 
+class Resizer {
+
+public:
+  Resizer(int mSubsampling);
+
+  bool 
+  resize(Minicap::Frame *pFrame,  unsigned char **ppBuffer, unsigned long *pBufferSize);
+
+  bool
+  reserveData(uint32_t width, uint32_t height);
+
+private:
+  int mSubsampling;
+  unsigned char *mCompressedData;
+  unsigned long mCompressedDataSize;
+  unsigned char *mDecompressData;
+  unsigned long mDecompressDataSize;
+};
 
 class JpgEncoder {
 public:
-  JpgEncoder(unsigned int prePadding, unsigned int postPadding);
+  JpgEncoder(unsigned int prePadding, unsigned int postPadding, unsigned int sampling = TJSAMP_420, float scaling = 1);
 
   ~JpgEncoder();
 
@@ -45,8 +63,10 @@ public:
   reserveData(uint32_t width, uint32_t height);
 
 private:
-  tjhandle mTjHandle;
+  tjhandle mTjCompressHandle;
+  tjhandle mTjDecompressHandle;
   int mSubsampling;
+  float mScaling;
   unsigned int mPrePadding;
   unsigned int mPostPadding;
   unsigned int mMaxWidth;
@@ -54,8 +74,19 @@ private:
   unsigned char* mEncodedData;
   unsigned long mEncodedSize;
 
+  unsigned char *mCompressBuffer;
+  unsigned long mCompressBufferSize;
+
+  unsigned char *mDecompressBuffer;
+  unsigned long mDecompressBufferSize;
+
+public:
   static int
   convertFormat(Minicap::Format format);
+
+  static const char *
+  convertSampling(int n);
+  
 };
 
 #endif

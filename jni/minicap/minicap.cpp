@@ -27,7 +27,7 @@
 #define DEFAULT_SOCKET_NAME "minicap"
 #define DEFAULT_DISPLAY_ID 0
 #define DEFAULT_JPG_QUALITY 80
-
+#define DEFAULT_SAMPLE_TYPE TJSAMP_420
 enum {
   QUIRK_DUMB            = 1,
   QUIRK_ALWAYS_UPRIGHT  = 2,
@@ -47,7 +47,30 @@ usage(const char* pname) {
     "  -S:            Skip frames when they cannot be consumed quickly enough.\n"
     "  -t:            Attempt to get the capture method running, then exit.\n"
     "  -i:            Get display information in JSON format. May segfault.\n"
-    "  -x:            Get the scaling factors of libjpeg-turbo.\r\n"
+    "  -x <value>:    Get the scaling factors of libjpeg-turbo.\r\n"
+    "                 Scaling: 2/1 (Percentage: 2.000000)\r\n"
+    "                 Scaling: 15/8 (Percentage: 1.875000)\r\n"
+    "                 Scaling: 7/4 (Percentage: 1.750000)\r\n"
+    "                 Scaling: 13/8 (Percentage: 1.625000)\r\n"
+    "                 Scaling: 3/2 (Percentage: 1.500000)\r\n"
+    "                 Scaling: 11/8 (Percentage: 1.375000\r\n"
+    "                 Scaling: 5/4 (Percentage: 1.250000)\r\n"
+    "                 Scaling: 9/8 (Percentage: 1.125000)\r\n"
+    "                 Scaling: 1/1 (Percentage: 1.000000)\r\n"
+    "                 Scaling: 7/8 (Percentage: 0.875000)\r\n"
+    "                 Scaling: 3/4 (Percentage: 0.750000)\r\n"
+    "                 Scaling: 5/8 (Percentage: 0.625000)\r\n"
+    "                 Scaling: 1/2 (Percentage: 0.500000)\r\n"
+    "                 Scaling: 3/8 (Percentage: 0.375000)\r\n"
+    "                 Scaling: 1/4 (Percentage: 0.250000)\r\n"
+    "                 Scaling: 1/8 (Percentage: 0.125000)\r\n"
+    "  -z <value>:    Select the sample option of jpge encoder (Default: TJSAMP_420).\r\n"
+    "                 TJSAMP_440    0\r\n"
+    "                 TJSAMP_422    1\r\n"
+    "                 TJSAMP_420    2\r\n"
+    "                 TJSAMP_GRAY   3\r\n"
+    "                 TJSAMP_440    4\r\n"
+    "                 TJSAMP_411    5\r\n"
     "  -h:            Show help.\n",
     pname, DEFAULT_DISPLAY_ID, DEFAULT_SOCKET_NAME
   );
@@ -211,15 +234,17 @@ main(int argc, char* argv[]) {
   const char* sockname = DEFAULT_SOCKET_NAME;
   uint32_t displayId = DEFAULT_DISPLAY_ID;
   unsigned int quality = DEFAULT_JPG_QUALITY;
+  unsigned int sampling = DEFAULT_SAMPLE_TYPE;
   bool showInfo = false;
   bool takeScreenshot = false;
   bool skipFrames = false;
   bool testOnly = false;
   bool scalingFactors = false;
+  float scaling = 1;
   Projection proj;
 
   int opt;
-  while ((opt = getopt(argc, argv, "d:n:P:Q:siSthx")) != -1) {
+  while ((opt = getopt(argc, argv, "x:z:d:n:P:Q:siSth")) != -1) {
     switch (opt) {
     case 'd':
       displayId = atoi(optarg);
@@ -254,7 +279,13 @@ main(int argc, char* argv[]) {
       usage(pname);
       return EXIT_SUCCESS;
     case 'x':
-      scalingFactors = true;
+      scaling = atof(optarg);
+      break;
+    case 'z':
+      sampling = atoi(optarg);
+      if(sampling <0 || sampling >= TJ_NUMSAMP){
+        return EXIT_FAILURE;
+      }
       break;
     case '?':
     default:
@@ -286,17 +317,21 @@ main(int argc, char* argv[]) {
         ((1920 * pCurrent->num + pCurrent->denom - 1) / pCurrent->denom));
     }
   */
-  if (scalingFactors){
+  if (scaling != 1){
     int num = 0;
     tjscalingfactor *pScalingFactor = tjGetScalingFactors(&num);
-    printf("==============================\r\n");
-    printf("Scaling Table of libjpge-turbo\r\n");
-    printf("==============================\r\n");
-    for(int i=0; i<num; i++){
+    int i=0;
+    for(i=0; i<num; i++){
       ScalingFactor factor = ScalingFactor(pScalingFactor + i);
-      printf("Scaling: %d/%d (Percentage: %f)\r\n", factor.num(), factor.denom(), factor.scalingPercentage());
+      if(scaling == factor.scalingPercentage()){
+        break;
+      }
     }
-    return EXIT_SUCCESS;
+    if(i == num){
+      MCERROR("Unsupport scaling param: %f", scaling);
+      return EXIT_SUCCESS;
+    }
+    
   }
   if (showInfo) {
     Minicap::DisplayInfo info;
@@ -353,7 +388,9 @@ main(int argc, char* argv[]) {
 
   std::cerr << "PID: " << getpid() << std::endl;
   std::cerr << "INFO: Using projection " << proj << std::endl;
-
+  std::cerr << "INFO: Sampling  " << JpgEncoder::convertSampling(sampling) << std::endl;
+  std::cerr << "INFO: Scaling  " << proj.realWidth * scaling << "*" << proj.realHeight * scaling << std::endl;
+  std::cerr << "INFO: Quality  " << quality << std::endl;
   // Disable STDOUT buffering.
   setbuf(stdout, NULL);
 
@@ -370,7 +407,8 @@ main(int argc, char* argv[]) {
 
   // Leave a 4-byte padding to the encoder so that we can inject the size
   // to the same buffer.
-  JpgEncoder encoder(4, 0);
+  // defaule sample type: TJSAMP_420
+  JpgEncoder encoder(4, 0, sampling, scaling);
   Minicap::Frame frame;
   bool haveFrame = false;
 
