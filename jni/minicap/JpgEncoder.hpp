@@ -2,9 +2,9 @@
 #define MINICAP_JPG_ENCODER_HPP
 
 #include <turbojpeg.h>
-
+#include <libyuv.h>
 #include "Minicap.hpp"
-
+using namespace libyuv;
 class ScalingFactor {
 public:
   ScalingFactor(const tjscalingfactor *pFactor);
@@ -43,6 +43,55 @@ private:
   unsigned char *mDecompressData;
   unsigned long mDecompressDataSize;
 };
+
+
+struct YuvFrame {
+    int width;
+    int height;
+    int size;
+    unsigned char *data;
+    unsigned char *y;
+    unsigned char *u;
+    unsigned char *v;
+};
+
+class YUVEncoder {
+public:
+  YUVEncoder(uint32 fourcc = FOURCC_I420);
+  ~YUVEncoder();
+
+  bool
+  reserveData(uint32_t width, uint32_t height, float scale);
+
+  bool 
+  encode(Minicap::Frame *frame);
+
+  int
+  getEncodedSize();
+
+  unsigned char*
+  getEncodedData();
+/*
+  struct Frame {
+    void const* data;
+    Format format;
+    uint32_t width;
+    uint32_t height;    
+    uint32_t stride;//stride指在内存中每行像素所占的空间,因为涉及到内存对其的问题，所以stride／bpp并不能代表图片的宽度
+    uint32_t bpp;//Byte per pixel
+    size_t size;
+  };
+  */
+  int trgb2yuv(Minicap::Frame *frame, YuvFrame *yuvFrame, YuvFrame *scaledFrame, YuvFrame *nvFrame);
+
+  uint32 fourcc;
+  tjhandle handle;
+  YuvFrame rawFrame;
+  YuvFrame scaledFrame;
+  YuvFrame nvFrame;
+  unsigned int count;
+};
+
 
 class JpgEncoder {
 public:

@@ -15,7 +15,8 @@
 #include <thread>
 
 #include <Minicap.hpp>
-
+#include <libyuv.h>
+using namespace libyuv;
 #include "util/debug.h"
 #include "JpgEncoder.hpp"
 #include "SimpleServer.hpp"
@@ -42,11 +43,12 @@ usage(const char* pname) {
     "  -d <id>:       Display ID. (%d)\n"
     "  -n <name>:     Change the name of the abtract unix domain socket. (%s)\n"
     "  -P <value>:    Display projection (<w>x<h>@<w>x<h>/{0|90|180|270}).\n"
-    "  -Q <value>:    JPEG quality (0-100).\n"
+    //"  -Q <value>:    JPEG quality (0-100).\n"
     "  -s:            Take a screenshot and output it to stdout. Needs -P.\n"
     "  -S:            Skip frames when they cannot be consumed quickly enough.\n"
     "  -t:            Attempt to get the capture method running, then exit.\n"
     "  -i:            Get display information in JSON format. May segfault.\n"
+    /*
     "  -x <value>:    Get the scaling factors of libjpeg-turbo.\r\n"
     "                 Scaling: 2/1 (Percentage: 2.000000)\r\n"
     "                 Scaling: 15/8 (Percentage: 1.875000)\r\n"
@@ -71,6 +73,7 @@ usage(const char* pname) {
     "                 TJSAMP_GRAY   3\r\n"
     "                 TJSAMP_440    4\r\n"
     "                 TJSAMP_411    5\r\n"
+    */
     "  -h:            Show help.\n",
     pname, DEFAULT_DISPLAY_ID, DEFAULT_SOCKET_NAME
   );
@@ -240,7 +243,7 @@ main(int argc, char* argv[]) {
   bool skipFrames = false;
   bool testOnly = false;
   bool scalingFactors = false;
-  float scaling = 1;
+  float scaling = 0.5;
   Projection proj;
 
   int opt;
@@ -317,6 +320,7 @@ main(int argc, char* argv[]) {
         ((1920 * pCurrent->num + pCurrent->denom - 1) / pCurrent->denom));
     }
   */
+  /*
   if (scaling != 1){
     int num = 0;
     tjscalingfactor *pScalingFactor = tjGetScalingFactors(&num);
@@ -331,8 +335,8 @@ main(int argc, char* argv[]) {
       MCERROR("Unsupport scaling param: %f", scaling);
       return EXIT_SUCCESS;
     }
-    
   }
+  */
   if (showInfo) {
     Minicap::DisplayInfo info;
 
@@ -408,7 +412,12 @@ main(int argc, char* argv[]) {
   // Leave a 4-byte padding to the encoder so that we can inject the size
   // to the same buffer.
   // defaule sample type: TJSAMP_420
-  JpgEncoder encoder(4, 0, sampling, scaling);
+  //JpgEncoder encoder(4, 0, sampling, scaling);
+  //
+  //i420p支持机型
+  //i420sp支持机型
+  //YUVEncoder encoder = YUVEncoder(FOURCC_NV12);
+  YUVEncoder encoder = YUVEncoder();  
   Minicap::Frame frame;
   bool haveFrame = false;
 
@@ -452,7 +461,8 @@ main(int argc, char* argv[]) {
     goto disaster;
   }
 
-  if (!encoder.reserveData(realInfo.width, realInfo.height)) {
+  //if (!encoder.reserveData(realInfo.width, realInfo.height)) {
+  if(!encoder.reserveData(realInfo.width, realInfo.height, scaling)){
     MCERROR("Unable to reserve data for JPG encoder");
     goto disaster;
   }
@@ -469,16 +479,26 @@ main(int argc, char* argv[]) {
       goto disaster;
     }
 
-    if (!encoder.encode(&frame, quality)) {
+    if (!encoder.encode(&frame)) {
       MCERROR("Unable to encode frame");
       goto disaster;
     }
 
+/*
+    YUVEncoder yuv = YUVEncoder();
+    yuv.reserveData(1080, 1920, 0.3);
+    yuv.encode(&frame);
+    if (pumpf(STDOUT_FILENO, yuv.nvFrame.data, yuv.nvFrame.size) < 0) {
+      MCERROR("Unable to output encoded frame data");
+      goto disaster;
+    }
+  */  
+        
     if (pumpf(STDOUT_FILENO, encoder.getEncodedData(), encoder.getEncodedSize()) < 0) {
       MCERROR("Unable to output encoded frame data");
       goto disaster;
     }
-
+    
     return EXIT_SUCCESS;
   }
 
@@ -558,19 +578,19 @@ main(int argc, char* argv[]) {
       haveFrame = true;
 
       // Encode the frame.
-      if (!encoder.encode(&frame, quality)) {
+      if (!encoder.encode(&frame/*, quality*/)) {
         MCERROR("Unable to encode frame");
         goto disaster;
       }
 
       // Push it out synchronously because it's fast and we don't care
       // about other clients.
-      unsigned char* data = encoder.getEncodedData() - 4;
+      unsigned char* data = encoder.getEncodedData();// - 4;
       size_t size = encoder.getEncodedSize();
 
       putUInt32LE(data, size);
 
-      if (pumps(fd, data, size + 4) < 0) {
+      if (pumps(fd, data, size/* + 4*/) < 0) {
         break;
       }
 

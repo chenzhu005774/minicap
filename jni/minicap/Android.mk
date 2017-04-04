@@ -9,10 +9,15 @@ LOCAL_SRC_FILES := \
 	minicap.cpp \
 
 LOCAL_STATIC_LIBRARIES := \
+	libyuv \
 	libjpeg-turbo \
 
 LOCAL_SHARED_LIBRARIES := \
 	minicap-shared \
+	libcutils \
+	libutils \
+	libbinder \
+	libui \
 
 include $(BUILD_STATIC_LIBRARY)
 
