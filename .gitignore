@@ -5,5 +5,5 @@
 /libs/
 /prebuilt/
 /temp/
-jni/vendor/libyuv/lib/
+jni/vendor/libyuv/libs/
 jni/vendor/libyuv/obj/
