@@ -48,7 +48,7 @@ else
 fi
 
 # Run!
-adb shell LD_LIBRARY_PATH=$dir "$dir/$bin -P 1080x1920@1080x1920/0 -s > /data/local/tmp/1.yuv"
+adb shell LD_LIBRARY_PATH=$dir "$dir/$bin -x 1 -P 720x1280@720x1280/0 -s > /data/local/tmp/1.yuv"
 
 
 adb pull /data/local/tmp/1.yuv

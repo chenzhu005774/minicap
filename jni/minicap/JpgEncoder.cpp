@@ -28,7 +28,7 @@ YUVEncoder::YUVEncoder(uint32 fourcc):
   fourcc(fourcc),
   count(0)
 { 
-    
+    MCINFO("YUVEncoder created with corlor format %d", fourcc);
 }
 
 YUVEncoder::~YUVEncoder(){
@@ -85,17 +85,26 @@ YUVEncoder::reserveData(uint32_t width, uint32_t height, float scale){
       frames[i]->v = frames[i]->u + dest_width*dest_height / 4;
     }
   }
+
+  return true;
 }
 
 bool YUVEncoder::encode(Minicap::Frame *frame){
   //printf("Frame Format: %d\r\n", JpgEncoder::convertFormat(frame->format));
-  int ret = tjEncodeYUV3(handle, (unsigned char *)frame->data, frame->width, 
-    frame->bpp * frame->stride, /* 设置为0等价于width * tjPixelSize[pixelFormat] */
-    frame->height, TJPF_RGBA, rawFrame.data, 1, TJSAMP_420, 0);  
+  
+  //int ret = tjEncodeYUV3(handle, (unsigned char *)frame->data, frame->width, 
+  //  frame->bpp * frame->stride, /* 设置为0等价于width * tjPixelSize[pixelFormat] */
+  //  frame->height, TJPF_RGBA, rawFrame.data, 1, TJSAMP_420, TJFLAG_FASTDCT | TJFLAG_NOREALLOC);  
+  int ret = ABGRToI420((uint8 *)frame->data, frame->bpp * frame->stride,
+                  rawFrame.y, rawFrame.width,
+                  rawFrame.u, rawFrame.width / 2,
+                  rawFrame.v, rawFrame.width / 2,
+                  frame->width, frame->height);
   if (ret < 0)  
   {  
     MCINFO("encode to yuv failed: %s\n", tjGetErrorStr());  
   }
+  
 
   ret = I420Scale(rawFrame.y, rawFrame.width,
                   rawFrame.u, rawFrame.width / 2,
@@ -108,17 +117,16 @@ bool YUVEncoder::encode(Minicap::Frame *frame){
                   kFilterNone);
   
   //uint32 fourcc = FOURCC_NV12;
-  
-  ret = ConvertFromI420(scaledFrame.y, scaledFrame.width,
-                           scaledFrame.u, scaledFrame.width / 2,
-                           scaledFrame.v, scaledFrame.width / 2,
-                           nvFrame.data, nvFrame.width,
-                           nvFrame.width, nvFrame.height,
-                           fourcc);
+
+    ret = ConvertFromI420(scaledFrame.y, scaledFrame.width,
+                            scaledFrame.u, scaledFrame.width / 2,
+                            scaledFrame.v, scaledFrame.width / 2,
+                            nvFrame.data, nvFrame.width,
+                            nvFrame.width, nvFrame.height,
+                            fourcc);
 
   MCINFO("[%d]Raw data encode into %dK yuv data!", count++, nvFrame.size/1024);  
   return ret == 0;
-
 }
 int
 YUVEncoder::getEncodedSize(){

@@ -48,6 +48,7 @@ usage(const char* pname) {
     "  -S:            Skip frames when they cannot be consumed quickly enough.\n"
     "  -t:            Attempt to get the capture method running, then exit.\n"
     "  -i:            Get display information in JSON format. May segfault.\n"
+    "  -f:            0:I420, 1:NV12"
     /*
     "  -x <value>:    Get the scaling factors of libjpeg-turbo.\r\n"
     "                 Scaling: 2/1 (Percentage: 2.000000)\r\n"
@@ -136,7 +137,7 @@ pumps(int fd, unsigned char* data, size_t length) {
   do {
     // Make sure that we don't generate a SIGPIPE even if the socket doesn't
     // exist anymore. We'll still get an EPIPE which is perfect.
-    int wrote = send(fd, data, length, MSG_NOSIGNAL);
+    int wrote = send(fd, data, length, 0/*, MSG_NOSIGNAL*/);
 
     if (wrote < 0) {
       return wrote;
@@ -150,11 +151,13 @@ pumps(int fd, unsigned char* data, size_t length) {
   return 0;
 }
 
+
 static int
 pumpf(int fd, unsigned char* data, size_t length) {
+  //MCERROR("YUV Size: %d", length);
   do {
     int wrote = write(fd, data, length);
-
+    //MCERROR("%d bytes wrote", wrote);
     if (wrote < 0) {
       return wrote;
     }
@@ -243,11 +246,12 @@ main(int argc, char* argv[]) {
   bool skipFrames = false;
   bool testOnly = false;
   bool scalingFactors = false;
+  unsigned int format = 0;
   float scaling = 0.5;
   Projection proj;
 
   int opt;
-  while ((opt = getopt(argc, argv, "x:z:d:n:P:Q:siSth")) != -1) {
+  while ((opt = getopt(argc, argv, "x:z:d:n:P:f:Q:siSth")) != -1) {
     switch (opt) {
     case 'd':
       displayId = atoi(optarg);
@@ -263,6 +267,9 @@ main(int argc, char* argv[]) {
       }
       break;
     }
+    case 'f':
+      format = atoi(optarg);
+      break;
     case 'Q':
       quality = atoi(optarg);
       break;
@@ -416,8 +423,8 @@ main(int argc, char* argv[]) {
   //
   //i420p支持机型
   //i420sp支持机型
-  //YUVEncoder encoder = YUVEncoder(FOURCC_NV12);
-  YUVEncoder encoder = YUVEncoder();  
+  
+  YUVEncoder encoder = YUVEncoder(format == 0 ? FOURCC_I420 : FOURCC_NV12);
   Minicap::Frame frame;
   bool haveFrame = false;
 
@@ -493,7 +500,7 @@ main(int argc, char* argv[]) {
       goto disaster;
     }
   */  
-        
+    MCERROR("Capture Screen!");
     if (pumpf(STDOUT_FILENO, encoder.getEncodedData(), encoder.getEncodedSize()) < 0) {
       MCERROR("Unable to output encoded frame data");
       goto disaster;
@@ -588,7 +595,7 @@ main(int argc, char* argv[]) {
       unsigned char* data = encoder.getEncodedData();// - 4;
       size_t size = encoder.getEncodedSize();
 
-      putUInt32LE(data, size);
+      //pumpf(STDOUT_FILENO, data, size);
 
       if (pumps(fd, data, size/* + 4*/) < 0) {
         break;

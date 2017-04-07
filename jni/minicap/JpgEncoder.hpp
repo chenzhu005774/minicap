@@ -57,7 +57,7 @@ struct YuvFrame {
 
 class YUVEncoder {
 public:
-  YUVEncoder(uint32 fourcc = FOURCC_I420);
+  YUVEncoder(uint32 fourcc);
   ~YUVEncoder();
 
   bool

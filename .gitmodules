@@ -7,3 +7,6 @@
 [submodule "web-player/Broadway"]
 	path = web-player/Broadway
 	url = https://github.com/mbebenita/Broadway.git
+[submodule "web-player/BroadwayStream"]
+	path = web-player/BroadwayStream
+	url = https://github.com/soliton4/BroadwayStream.git
